@@ -1,28 +1,27 @@
 // src/services/simulation.js
 
 // ======================================================
+// SMART COLLEGE BUS TRACKING SYSTEM
 // SIMULATED BUS / GPS / TRIP SERVICE
 // ======================================================
 
-// Generate a simulated GPS location
+
+// ======================================================
+// 1. SIMULATED GPS LOCATION
+// ======================================================
+
 export function generateGPSLocation(previousLocation) {
   const latitude =
-    previousLocation.latitude + (Math.random() - 0.5) * 0.001;
+    previousLocation.latitude +
+    (Math.random() - 0.5) * 0.001;
 
   const longitude =
-    previousLocation.longitude + (Math.random() - 0.5) * 0.001;
+    previousLocation.longitude +
+    (Math.random() - 0.5) * 0.001;
 
   const speed = Math.floor(20 + Math.random() * 25);
 
-  let updateInterval;
-
-  if (speed <= 5) {
-    updateInterval = 30000;
-  } else if (speed <= 50) {
-    updateInterval = 10000;
-  } else {
-    updateInterval = 5000;
-  }
+  const updateInterval = getGPSUpdateInterval(speed);
 
   return {
     latitude,
@@ -35,9 +34,21 @@ export function generateGPSLocation(previousLocation) {
 }
 
 
-// Generate random direction
+// ======================================================
+// 2. RANDOM DIRECTION
+// ======================================================
+
 export function getRandomDirection() {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const directions = [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW",
+  ];
 
   return directions[
     Math.floor(Math.random() * directions.length)
@@ -45,7 +56,10 @@ export function getRandomDirection() {
 }
 
 
-// Determine bus status from speed
+// ======================================================
+// 3. BUS STATUS
+// ======================================================
+
 export function getBusStatus(speed) {
   if (speed > 10) {
     return "In Transit";
@@ -55,7 +69,10 @@ export function getBusStatus(speed) {
 }
 
 
-// Automatic trip detection
+// ======================================================
+// 4. AUTOMATIC TRIP START
+// ======================================================
+
 export function detectTripStart({
   speed,
   scheduledTimePassed,
@@ -79,7 +96,10 @@ export function detectTripStart({
 }
 
 
-// Automatic trip end
+// ======================================================
+// 5. AUTOMATIC TRIP END
+// ======================================================
+
 export function detectTripEnd({
   collegeGeofence,
   depotGeofence,
@@ -113,9 +133,12 @@ export function detectTripEnd({
 }
 
 
-// Simulated geofence detection
+// ======================================================
+// 6. GEOFENCE DETECTION
+// ======================================================
+
 export function checkGeofence(latitude, longitude) {
-  // Prototype coordinates
+
   const college = {
     latitude: 23.2300,
     longitude: 72.7200,
@@ -149,7 +172,10 @@ export function checkGeofence(latitude, longitude) {
 }
 
 
-// Simple distance calculation
+// ======================================================
+// 7. DISTANCE CALCULATION
+// ======================================================
+
 export function calculateDistance(
   lat1,
   lon1,
@@ -168,19 +194,29 @@ export function calculateDistance(
       Math.sin(dLon / 2) ** 2;
 
   const c =
-    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
 
   return earthRadius * c;
 }
 
 
-// Convert degrees to radians
+// ======================================================
+// 8. DEGREE → RADIAN
+// ======================================================
+
 function toRadians(value) {
   return (value * Math.PI) / 180;
 }
 
 
-// Simulated ETA calculation
+// ======================================================
+// 9. ETA CALCULATION
+// ======================================================
+
 export function calculateETA(
   distance,
   speed,
@@ -217,7 +253,10 @@ export function calculateETA(
 }
 
 
-// Simulated AI ETA prediction
+// ======================================================
+// 10. AI ETA PREDICTION
+// ======================================================
+
 export function predictAIETA({
   distance,
   speed,
@@ -230,7 +269,7 @@ export function predictAIETA({
       distance,
       speed,
       traffic
-    ) || historicalTime;
+    ) || historicalTime || 0;
 
   let weatherAdjustment = 0;
 
@@ -247,12 +286,12 @@ export function predictAIETA({
   }
 
   const predictedETA =
-    normalETA +
-    weatherAdjustment;
+    normalETA + weatherAdjustment;
 
   return {
     eta: predictedETA,
     confidence: "Simulated AI Prediction",
+
     factors: {
       speed,
       traffic,
@@ -264,7 +303,10 @@ export function predictAIETA({
 }
 
 
-// Simulated delay prediction
+// ======================================================
+// 11. DELAY PREDICTION
+// ======================================================
+
 export function predictDelay({
   currentSpeed,
   traffic,
@@ -310,7 +352,10 @@ export function predictDelay({
 }
 
 
-// Simulated adaptive GPS interval
+// ======================================================
+// 12. GPS UPDATE INTERVAL
+// ======================================================
+
 export function getGPSUpdateInterval(speed) {
   if (speed <= 5) {
     return 30000;
@@ -324,27 +369,196 @@ export function getGPSUpdateInterval(speed) {
 }
 
 
-// Simulated offline data queue
+// ======================================================
+// 13. TRACKING HISTORY
+// ======================================================
+//
+// IMPORTANT:
+// Only last 24 hours of GPS tracking data is kept.
+// Older records are automatically removed.
+//
+
+const HISTORY_LIMIT_HOURS = 24;
+
+const HISTORY_LIMIT_MS =
+  HISTORY_LIMIT_HOURS *
+  60 *
+  60 *
+  1000;
+
+
+// Remove records older than 24 hours
+export function cleanTrackingHistory(records = []) {
+  const now = Date.now();
+
+  return records.filter((record) => {
+
+    if (!record.timestamp) {
+      return false;
+    }
+
+    const recordTime =
+      new Date(record.timestamp).getTime();
+
+    if (Number.isNaN(recordTime)) {
+      return false;
+    }
+
+    return (
+      now - recordTime <= HISTORY_LIMIT_MS
+    );
+  });
+}
+
+
+// Add new GPS record to history
+export function addTrackingHistoryRecord(
+  records = [],
+  gpsData
+) {
+  const newRecord = {
+    ...gpsData,
+
+    timestamp:
+      gpsData.timestamp ||
+      new Date().toISOString(),
+  };
+
+  const updatedRecords = [
+    newRecord,
+    ...records,
+  ];
+
+  // Automatically remove records older than 24 hours
+  return cleanTrackingHistory(
+    updatedRecords
+  );
+}
+
+
+// Get only last 24 hours history
+export function getTrackingHistory(
+  records = []
+) {
+  return cleanTrackingHistory(records);
+}
+
+
+// ======================================================
+// 14. LOCAL STORAGE TRACKING HISTORY
+// ======================================================
+//
+// This allows history to remain after page refresh.
+// Still, only the last 24 hours are retained.
+//
+
+const TRACKING_HISTORY_KEY =
+  "smartbus_tracking_history";
+
+
+export function saveTrackingHistory(
+  records = []
+) {
+  const cleanRecords =
+    cleanTrackingHistory(records);
+
+  localStorage.setItem(
+    TRACKING_HISTORY_KEY,
+    JSON.stringify(cleanRecords)
+  );
+
+  return cleanRecords;
+}
+
+
+export function loadTrackingHistory() {
+
+  const storedHistory =
+    localStorage.getItem(
+      TRACKING_HISTORY_KEY
+    );
+
+  if (!storedHistory) {
+    return [];
+  }
+
+  try {
+
+    const records =
+      JSON.parse(storedHistory);
+
+    // Remove anything older than 24 hours
+    const cleanRecords =
+      cleanTrackingHistory(records);
+
+    // Save cleaned version again
+    localStorage.setItem(
+      TRACKING_HISTORY_KEY,
+      JSON.stringify(cleanRecords)
+    );
+
+    return cleanRecords;
+
+  } catch (error) {
+
+    console.error(
+      "Unable to load tracking history:",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+// Clear tracking history manually
+export function clearTrackingHistory() {
+
+  localStorage.removeItem(
+    TRACKING_HISTORY_KEY
+  );
+
+  return [];
+}
+
+
+// ======================================================
+// 15. OFFLINE DATA QUEUE
+// ======================================================
+
 export function createOfflineRecord(data) {
   return {
     ...data,
+
     synced: false,
-    storedAt: new Date().toISOString(),
+
+    storedAt:
+      new Date().toISOString(),
   };
 }
 
 
-// Simulated synchronization
+// ======================================================
+// 16. SYNCHRONIZE OFFLINE DATA
+// ======================================================
+
 export function synchronizeOfflineData(records) {
+
   return records.map((record) => ({
     ...record,
+
     synced: true,
-    syncedAt: new Date().toISOString(),
+
+    syncedAt:
+      new Date().toISOString(),
   }));
 }
 
 
-// Simulated bus replacement event
+// ======================================================
+// 17. BUS REPLACEMENT EVENT
+// ======================================================
+
 export function createBusReplacementEvent({
   previousBus,
   newBus,
@@ -353,6 +567,7 @@ export function createBusReplacementEvent({
   route,
 }) {
   return {
+
     type: "BUS_REPLACEMENT",
 
     previousBus,
@@ -365,46 +580,83 @@ export function createBusReplacementEvent({
 
     route,
 
-    message: `Your bus has been changed from ${previousBus} to ${newBus}.`,
+    message:
+      `Your bus has been changed from ${previousBus} to ${newBus}.`,
 
-    timestamp: new Date().toISOString(),
+    timestamp:
+      new Date().toISOString(),
   };
 }
 
 
-// Simulated college arrival event
+// ======================================================
+// 18. COLLEGE ARRIVAL EVENT
+// ======================================================
+
 export function createCollegeArrivalEvent({
   busNumber,
   arrivalTime,
 }) {
   return {
+
     type: "COLLEGE_ARRIVAL",
 
     busNumber,
 
     arrivalTime,
 
-    message: `${busNumber} reached college at ${arrivalTime}.`,
+    message:
+      `${busNumber} reached college at ${arrivalTime}.`,
 
-    timestamp: new Date().toISOString(),
+    timestamp:
+      new Date().toISOString(),
   };
 }
 
 
-// Simulated bus departure event
+// ======================================================
+// 19. BUS DEPARTURE EVENT
+// ======================================================
+
 export function createBusDepartureEvent({
   busNumber,
   departureTime,
 }) {
   return {
+
     type: "BUS_DEPARTURE",
 
     busNumber,
 
     departureTime,
 
-    message: `${busNumber} has left the college.`,
+    message:
+      `${busNumber} has left the college.`,
 
-    timestamp: new Date().toISOString(),
+    timestamp:
+      new Date().toISOString(),
   };
+}
+// ======================================================
+// DAILY HISTORY CLEANUP
+// ======================================================
+
+export function cleanupDailyHistory() {
+  const today = new Date().toISOString().split("T")[0];
+
+  const lastHistoryDate =
+    localStorage.getItem("busHistoryDate");
+
+  // New day -> delete previous day's history
+  if (
+    lastHistoryDate &&
+    lastHistoryDate !== today
+  ) {
+    localStorage.removeItem("busTrackingHistory");
+  }
+
+  localStorage.setItem(
+    "busHistoryDate",
+    today
+  );
 }
